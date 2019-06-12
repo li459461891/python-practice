@@ -1,0 +1,74 @@
+# To sovle the compare order not same issue.
+
+# Since the diff file from linux and from wnidows are not in the same order
+# even for the same patch, the main function of this code in to sort the order
+# in one of the two patch files. Make it easy to compare the two patchs.
+
+# e.g.: in a.diff, the diff file order is :
+#      Index: Make/cmake/xxx.cmake
+#      Index: Make/cmake/yyy.cmake
+#      Index: Make/cmake/zzz.cmake
+# and in b.diff, the diff file order is :
+#      Index: Make/cmake/zzz.cmake
+#      Index: Make/cmake/yyy.cmake
+#      Index: Make/cmake/xxx.cmake
+# The aim of this cdoe is to make a b.diff.new file, the order of content is:
+#      Index: Make/cmake/xxx.cmake
+#      Index: Make/cmake/yyy.cmake
+#      Index: Make/cmake/zzz.cmake
+
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format=
+                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+class SortPatch:
+    INDEX_STR = "Index:"
+    def __init__(self):
+        self.tdic = {}
+
+    def read_file_to_dictionary(self, f, dic):
+        for line in f:
+            if 0 == line.find(self.INDEX_STR):
+                logger.debug(line)
+                cur_key = line
+                dic[cur_key] = line
+            else:
+                dic[cur_key] += line
+        return True
+
+    def sort(self, file_source, file_target):
+        try:
+            flg = True
+            
+            self.file_source_file = open(file_source, 'r')
+            self.file_target_file = open(file_target, 'r')
+            new_file = open(file_target + ".new", 'w')
+            self.read_file_to_dictionary(self.file_target_file, self.tdic)
+            for line in self.file_source_file:
+                if 0 == line.find(self.INDEX_STR):
+                    if line in self.tdic:
+                        new_file.write(self.tdic.pop(line))
+            logger.info('Match to ' + file_source +
+                             ' diff file complete.')
+            for reset_line in self.tdic:
+                new_file.write(self.tdic.pop(reset_line))
+            logger.info('New file of '+ file_target +
+                             ' patch file complete.')
+            self.file_source_file.close()
+            self.file_target_file.close()
+            new_file.close()
+        except Exception as e:
+            logger.warning(e)
+            flg = False
+        finally:
+            return flg
+
+# test code below
+if __name__ == '__main__':
+    my_sort = SortPatch()
+    my_sort.sort('C:\yongliliWork\Source\MyTest\\'
+                    'EclipsePy\SortPatchFile\Files\\a.diff',
+                    'C:\yongliliWork\Source\MyTest\\'
+                    'EclipsePy\SortPatchFile\Files\\b.diff')
